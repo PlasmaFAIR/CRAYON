@@ -9,6 +9,7 @@ from scipy.integrate import quad
 
 # Local imports
 from crayon.linear_current_drive.kinematics import thermal_momentum
+from crayon.shared.physics import lorentz_factor_from_normalised_momentum
 
 
 def F_func(fc: float, Te: float, u: float, Zeff: float) -> float:  # noqa: N802, N803
@@ -40,14 +41,13 @@ def F_func(fc: float, Te: float, u: float, Zeff: float) -> float:  # noqa: N802,
     x_array = (x_array[1:] + x_array[:-1]) / 2
     d_x = x_array[1] - x_array[0]
 
+    gamma = lorentz_factor_from_normalised_momentum(u / const.c)
+    gamma_x = lorentz_factor_from_normalised_momentum(u * x_array / const.c)
+
     tmp_int = (
         x_array ** (rhohat + 3)
-        * (1.0 / (1 + (u * x_array / const.c) ** 2) ** 1.5)
-        * (
-            (1 + np.sqrt(1 + (u / const.c) ** 2))
-            / (1 + np.sqrt(1 + (u * x_array / const.c) ** 2))
-        )
-        ** rhohat
+        * (1.0 / gamma_x**3)
+        * ((1.0 + gamma) / (1.0 + gamma_x)) ** rhohat
     )
 
     return coeff * d_x * np.sum(tmp_int)
@@ -78,14 +78,11 @@ def F_func_gamma(fc: float, Te: float, u: float, Zeff: float) -> float:  # noqa:
     ue2 = thermal_momentum(Te) ** 2
     rhohat = (Zeff + 1.0) / fc
 
-    def lorentz_factor(up):
-        return np.sqrt(1 + (up / const.c) ** 2)
-
     def integrand(up):
-        gp = lorentz_factor(up)
+        gp = lorentz_factor_from_normalised_momentum(up / const.c)
         return (up / gp) ** 3 * ((gp - 1) / (gp + 1)) ** (rhohat / 2)
 
-    gamma = lorentz_factor(u)
+    gamma = lorentz_factor_from_normalised_momentum(u / const.c)
     integral, _ = quad(integrand, 0.0, u, epsabs=0.0, epsrel=1e-12, limit=200)
 
     return ((gamma + 1) / (gamma - 1)) ** (rhohat / 2) * integral / ue2**2 / fc
