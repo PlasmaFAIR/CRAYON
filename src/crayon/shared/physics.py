@@ -372,6 +372,29 @@ def normalised_thermal_velocity_relativistic(temperature_ev: float) -> float:
     return np.sqrt(3 * theta * (1 - 2.5 * theta + 6.875 * theta * theta))
 
 
+def maxwellian_unnormalised(
+    lorentz_factor: float, temperature_ev: float
+) -> float:
+    """
+    Unnormalised relativistic Maxwellian, exp(-(gamma - 1) m c^2 / T_e)
+    (LL03, text after eq. 38).
+
+    Parameters
+    ----------
+    lorentz_factor : float
+        Lorentz factor gamma [].
+    temperature_ev : float
+        Electron temperature [eV].
+
+    Returns
+    -------
+    f_m : float
+        Unnormalised Maxwellian [].
+    """
+    w = (lorentz_factor - 1.0) * const.m_e * (const.c**2)
+    return np.exp(-w / (temperature_ev * const.eV))
+
+
 _debye_radius_const = (const.epsilon_0 / const.elementary_charge) ** 0.5
 
 

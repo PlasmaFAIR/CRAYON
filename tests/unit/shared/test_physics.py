@@ -15,12 +15,14 @@ from crayon.shared.numerics import (
     second_derivative_finite_difference,
 )
 from crayon.shared.physics import (
+    ELECTRON_REST_MASS_ENERGY_EV,
     critical_density_per_m3,
     critical_magnetic_field_strength_t,
     cyclotron_frequency_ghz,
     electron_ion_collision_frequency_first_derivative,
     electron_ion_collision_frequency_ghz,
     electron_ion_collision_frequency_second_derivative,
+    maxwellian_unnormalised,
     plasma_frequency_ghz,
 )
 
@@ -136,3 +138,44 @@ class TestDerivatives:
         )
 
         nptest.assert_allclose(expected_value, actual_value, atol=1e-8)
+
+
+class TestMaxwellianUnnormalised:
+    """
+    Unit tests for maxwellian_unnormalised: exp(-(gamma - 1) m c^2 / T_e).
+    """
+
+    params_te = (10.0, 2.0e3, 25.0e3)
+
+    @staticmethod
+    @pytest.mark.parametrize("temperature_ev", params_te)
+    def test_at_rest(temperature_ev: float):
+        """
+        f_M = 1 at gamma = 1.
+        """
+        nptest.assert_equal(maxwellian_unnormalised(1.0, temperature_ev), 1.0)
+
+    @staticmethod
+    @pytest.mark.parametrize("temperature_ev", params_te)
+    def test_log_linear(temperature_ev: float):
+        """
+        The log of f_M is proportional to gamma - 1, so ratios of log f_M
+        should equal ratios of gamma - 1.
+        """
+        gamma = np.linspace(1.001, 1.01, 10)
+        log_f = np.log(maxwellian_unnormalised(gamma, temperature_ev))
+        log_ratio = log_f / log_f[0]
+        nptest.assert_allclose(
+            log_ratio, (gamma - 1.0) / (gamma[0] - 1.0), rtol=1e-12
+        )
+
+    @staticmethod
+    @pytest.mark.parametrize("temperature_ev", params_te)
+    def test_thermal_energy(temperature_ev: float):
+        """
+        f_M = 1 / e at kinetic energy (gamma - 1) m c^2 = T_e.
+        """
+        gamma = 1.0 + temperature_ev / ELECTRON_REST_MASS_ENERGY_EV
+        nptest.assert_allclose(
+            maxwellian_unnormalised(gamma, temperature_ev), np.exp(-1.0)
+        )
